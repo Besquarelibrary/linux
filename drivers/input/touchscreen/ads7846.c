@@ -72,9 +72,6 @@ static struct kobject *my_device1_kobj;
 /*static struct kobject *anusha_kobj;*/
 u16 sys_x;
 u16 sys_y;
-u16 peak;
-/*int pen;
-int dis;*/
 struct ts_event {
 	/*
 	 * For portability, we can't read 12 bit values using SPI (which
@@ -608,15 +605,14 @@ static ssize_t ads7846_pen_down_show(struct device *dev,
 
 static DEVICE_ATTR(pen_down, S_IRUGO, ads7846_pen_down_show, NULL);
 
-/*pen=pen_down;*/
-/*printk(KERN_INFO "PENDOWN VALUE IS------------------------- %s",typeof(pen_down));*/
 static ssize_t ads7846_disable_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	struct ads7846 *ts = dev_get_drvdata(dev);
+
 	return sprintf(buf, "%u\n", ts->disabled);
 }
-/*printk(KERN_INFO "DISABLE VALUE TYPE IS--------------------- %s",typeof(disable));*/
+
 static ssize_t ads7846_disable_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
@@ -638,10 +634,6 @@ static ssize_t ads7846_disable_store(struct device *dev,
 }
 
 static DEVICE_ATTR(disable, 0664, ads7846_disable_show, ads7846_disable_store);
-
-/*dis=disable;*/
-/*printk(KERN_INFO "VALUE OF THE PEN_DOWN IS---------- %d\n",pen);
-printk(KERN_INFO "VALUE OF THE DISABLE IS------------- %d\n",dis);*/
 
 /*struct kobj_attribute etx_attr = __ATTR(etx_value, 0660, sysfs_show, sysfs_store);
 
@@ -673,21 +665,12 @@ static ssize_t sys_y_show(struct device *dev, struct device_attribute *attr, cha
 
    return sprintf(buf, "%u\n", sys_y);
 }
-/*static ssize_t pen_down_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-   return sprintf(buf,"%u\n",pen_down);
-}
-static ssize_t disable_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-   return sprintf(buf,"%\n",disable);
-}*/
 
 
 
 static DEVICE_ATTR(sys_x, 0664, sys_x_show, NULL);
 static DEVICE_ATTR(sys_y, 0664, sys_y_show, NULL);
-/*static DEVICE_ATTR(pen_down, 0664, pen_down_show, NULL);
-static DEVICE_ATTR(disable, 0664, disable_show, NULL);*/
+
 static struct attribute *ads784x_attributes[] = {
 	&dev_attr_pen_down.attr,
 	&dev_attr_disable.attr,
@@ -899,8 +882,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 	sys_y=y;
 	printk(KERN_INFO "---------------------:%u\n",sys_x);
 	printk(KERN_INFO "----------------------:%u\n",sys_y);
-        /*printk(KERN_INFO "PENDOWN VALUE:%d\n",pen);
-	printk(KERN_INFO "DISABLED VALUE: %d\n",dis);*/
+
 	/*
 	 * Maybe check the pendown state before reporting. This discards
 	 * false readings when the pen is lifted.
@@ -912,8 +894,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 	}
 	printk(KERN_INFO "---------------------:%u\n",x);
         printk(KERN_INFO "----------------------:%u\n",y);
-        /*printk(KERN_INFO "PENDOWN VALUE:%d\n",pen);
-        printk(KERN_INFO "DISABLED VALUE: %d\n",dis);*/
+
 
 
 	/*
@@ -1021,18 +1002,19 @@ static int __maybe_unused ads7846_resume(struct device *dev)
 
 static SIMPLE_DEV_PM_OPS(ads7846_pm, ads7846_suspend, ads7846_resume);
 
-/*static int ads7846_setup_pendown(struct spi_device *spi,
+static int ads7846_setup_pendown(struct spi_device *spi,
 				 struct ads7846 *ts,
 				 const struct ads7846_platform_data *pdata)
 {
 	int err;
 
+	/*
 	 * REVISIT when the irq can be triggered active-low, or if for some
 	 * reason the touchscreen isn't hooked up, we don't need to access
 	 * the pendown state.
 	 */
 
-	/*if (pdata->get_pendown_state) {
+	if (pdata->get_pendown_state) {
 		ts->get_pendown_state = pdata->get_pendown_state;
 	} else if (gpio_is_valid(pdata->gpio_pendown)) {
 
@@ -1056,48 +1038,12 @@ static SIMPLE_DEV_PM_OPS(ads7846_pm, ads7846_suspend, ads7846_resume);
 	}
 
 	return 0;
-}*/
+}
 
 /*
  * Set up the transfers to read touchscreen state; this assumes we
  * use formula #2 for pressure, not #3.
  */
-static int ads7846_setup_pendown(struct spi_device *spi,
-                                 struct ads7846 *ts,
-                                 const struct ads7846_platform_data *pdata,
-                                 int gpio_pendown) // New argument for the GPIO
-{
-        int err;
-
-        /*
-         * REVISIT when the irq can be triggered active-low, or if for some
-         * reason the touchscreen isn't hooked up, we don't need to access
-         * the pendown state.
-         */
-
-        if (gpio_is_valid(gpio_pendown)) {
-                err = gpio_request_one(gpio_pendown, GPIOF_IN,
-                                       "ads7846_pendown");
-                if (err) {
-                        dev_err(&spi->dev,
-                                "failed to request/setup pendown GPIO%d: %d\n",
-                                gpio_pendown, err);
-                        return err;
-                }
-
-                ts->gpio_pendown = gpio_pendown;
-
-                if (pdata->gpio_pendown_debounce)
-                        gpio_set_debounce(gpio_pendown,
-                                          pdata->gpio_pendown_debounce);
-        } else {
-                dev_err(&spi->dev, "Invalid pendown GPIO\n");
-                return -EINVAL;
-        }
-
-        return 0;
-}
-
 static void ads7846_setup_spi_msg(struct ads7846 *ts,
 				  const struct ads7846_platform_data *pdata)
 {
@@ -1377,7 +1323,7 @@ static const struct ads7846_platform_data *ads7846_probe_dt(struct device *dev)
 	pdata->wakeup = of_property_read_bool(node, "wakeup-source") ||
 			of_property_read_bool(node, "linux,wakeup");
 
-	/*pdata->gpio_pendown = of_get_named_gpio(dev->of_node, "pendown-gpio", 0);*/
+	pdata->gpio_pendown = of_get_named_gpio(dev->of_node, "pendown-gpio", 0);
 
 	return pdata;
 }
@@ -1408,16 +1354,16 @@ static int ads7846_probe(struct spi_device *spi)
             kobject_put(anusha_kobj);
             return -ENOMEM;
         }*/
-	/*anusha=class_create(THIS_MODULE,"anusha");
+	anusha=class_create(THIS_MODULE,"anusha");
 	printk(KERN_INFO "NNNNNNNNNNNNNNNNN--------------------------\n");
 	if (IS_ERR(anusha)){
             printk(KERN_ERR "failed -------------------------------------\n");
 	
 	}
-        class_destroy(anusha);*/
+        class_destroy(anusha);
 	struct kobject *my_device1_kobj=kobject_create_and_add("my_device1",kernel_kobj);
 	if(!my_device1_kobj) {
-           printk(KERN_ERR "Failedto create kobject for my_device1\n");
+           printk(KERN_ERR "Failed to create kobject for my_device1\n");
            return -ENOMEM;
         }
 
@@ -1431,25 +1377,15 @@ static int ads7846_probe(struct spi_device *spi)
 	if (!spi->irq) {
 		dev_dbg(&spi->dev, "no IRQ?\n");
 		return -EINVAL;
-       	}
-	dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
-        dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
-
-        printk(KERN_INFO "--------****************************------------------%p\n",&spi->dev);
-        printk(KERN_INFO "--------****************************------------------%p\n",&spi->dev);
+	}
 
 	/* don't exceed max specified sample rate */
 	if (spi->max_speed_hz > (125000 * SAMPLE_BITS)) {
-		peak=(125000 * SAMPLE_BITS);
 		dev_err(&spi->dev, "f(sample) %d KHz?\n",
 				(spi->max_speed_hz/SAMPLE_BITS)/1000);
-		printk(KERN_INFO "_______PEAK**********VALUE: %u\n",peak);
 		printk(KERN_INFO "--------****************************------------------%p\n",&spi->dev);
 		return -EINVAL;
 	}
-        printk(KERN_INFO "--------****************************------------------%p\n",&spi->dev);
-        dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
-        printk(KERN_INFO "_______PEAK**********VALUE: %u\n",peak);
 
 	/*
 	 * We'd set TX word size 8 bits and RX word size to 13 bits ... except
@@ -1461,10 +1397,6 @@ static int ads7846_probe(struct spi_device *spi)
 	err = spi_setup(spi);
 	if (err < 0)
 		return err;
-        
-        dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
-
-        printk(KERN_INFO "_______PEAK**********VALUE: %u\n",peak);
 
 	ts = kzalloc(sizeof(struct ads7846), GFP_KERNEL);
 	packet = kzalloc(sizeof(struct ads7846_packet), GFP_KERNEL);
@@ -1496,7 +1428,6 @@ static int ads7846_probe(struct spi_device *spi)
 	ts->vref_delay_usecs = pdata->vref_delay_usecs ? : 100;
 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
 	ts->vref_mv = pdata->vref_mv;
-        dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
 
 	if (pdata->filter != NULL) {
 		if (pdata->filter_init != NULL) {
@@ -1518,7 +1449,7 @@ static int ads7846_probe(struct spi_device *spi)
 		ts->filter = ads7846_no_filter;
 	}
 
-	err = ads7846_setup_pendown(spi, ts, pdata,17);
+	err = ads7846_setup_pendown(spi, ts, pdata);
 	if (err)
 		goto err_cleanup_filter;
 
@@ -1536,8 +1467,6 @@ static int ads7846_probe(struct spi_device *spi)
 	input_dev->dev.parent = &spi->dev;
 	printk(KERN_INFO "name of the device____________________________________________&&&&&&&%s\n",input_dev->name);
 	printk(KERN_INFO "phys of the device^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^6%s\n",input_dev->phys);
-        
-	dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
 
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
@@ -1572,8 +1501,6 @@ static int ads7846_probe(struct spi_device *spi)
 	ads7846_setup_spi_msg(ts, pdata);
 
 	ts->reg = regulator_get(&spi->dev, "vcc");
-	dev_info(&spi->dev, "spi->max_speed_hz******************************************************************* = %d\n", spi->max_speed_hz);
-
 	printk(KERN_INFO "VALUE-------------------&&&&&&&&&&&&&&&&&&&&&_________________%p\n",&spi->dev);
 	printk(KERN_INFO "data************************************%s",spi->dev);
 	if (IS_ERR(ts->reg)) {
@@ -1706,7 +1633,7 @@ static int ads7846_remove(struct spi_device *spi)
 
 static struct spi_driver ads7846_driver = {
 	.driver = {
-		.name	= "anu",
+		.name	= "ads7846",
 		.pm	= &ads7846_pm,
 		.of_match_table = of_match_ptr(ads7846_dt_ids),
 	},
@@ -1717,7 +1644,7 @@ static struct spi_driver ads7846_driver = {
 /*static int __init my_module_init(void)
 {
     // Create the kobject for your device
-    my_device_kobj = kobject_("my_device", kernel_kobj);
+    my_device_kobj = kobject_create_and_add("my_device", kernel_kobj);
     if (!my_device_kobj) {
         printk(KERN_ERR "Failed to create kobject for my device\n");
         return -ENOMEM;
